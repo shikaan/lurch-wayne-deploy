@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: wayne-service
+  labels:
+    app: wayne
+spec:
+  ports:
+  - name: "8080"
+    port: 8080
+    targetPort: 8080
+  selector:
+    app: wayne
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: wayne-deployment
+  labels:
+    app: wayne
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: wayne
+  template:
+    metadata:
+      labels:
+        app: wayne
+    spec:
+      containers:
+      - image: shikaan/wayne:latest
+        name: wayne
+        ports:
+        - containerPort: 8080
+        restartPolicy: Always
+        volumeMounts:
+        - name: firebase-auth
+          mountPath: "/tmp/firebase_auth.json"  # TODO: take me from env
+          readOnly: true
+          subPath: "firebase_auth.json"
+        envFrom:
+        - secretRef: 
+            name: wayne-env
+      volumes:
+      - name: firebase-auth
+        secret:
+          secretName: firebase-auth-json
+          items:
+          - key: wayne_firebase_auth.json
+            path: firebase_auth.json
