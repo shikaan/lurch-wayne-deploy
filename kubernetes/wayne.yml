@@ -41,6 +41,11 @@ spec:
           mountPath: "/tmp/firebase_auth.json"  # TODO: take me from env
           readOnly: true
           subPath: "firebase_auth.json"
+        - mountPath: /opt/dynatrace/oneagent
+          name: oneagent
+        env:
+        - name: LD_PRELOAD
+          value: /opt/dynatrace/oneagent/agent/lib64/liboneagentproc.so
         envFrom:
         - secretRef: 
             name: wayne-env
@@ -51,3 +56,23 @@ spec:
           items:
           - key: wayne_firebase_auth.json
             path: firebase_auth.json
+      - name: oneagent
+        emptyDir: {}
+      initContainers:
+      - name: install-oneagent
+        image: alpine:3.8
+        command:
+        - /bin/sh
+        args:
+        - -c
+        - ARCHIVE=$(mktemp) && wget -O $ARCHIVE "$DT_API_URL/v1/deployment/installer/agent/unix/paas/latest?Api-Token=$DT_PAAS_TOKEN&$DT_ONEAGENT_OPTIONS" && unzip -o -d /opt/dynatrace/oneagent $ARCHIVE && rm -f $ARCHIVE
+        env:
+        - name: DT_API_URL
+          value: https://{{ DT_ENV_ID }}.live.dynatrace.com/api
+        - name: DT_PAAS_TOKEN
+          value: {{ DT_TOKEN }}
+        - name: DT_ONEAGENT_OPTIONS
+          value: flavor=default&include=go
+        volumeMounts:
+        - mountPath: /opt/dynatrace/oneagent
+          name: oneagent
